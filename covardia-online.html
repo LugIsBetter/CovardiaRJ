@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covardia - RJ Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .game-container {
+            background-color: #2d3748;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            max-width: 1200px;
+            width: 100%;
+            padding: 2rem;
+            margin: 0 auto;
+            border: 1px solid #4a5568;
+        }
+        .card {
+            background: linear-gradient(145deg, #4a5568, #2d3748);
+            border: 1px solid #718096;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            min-width: 100px;
+            min-height: 120px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.2);
+        }
+        .card-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 0.5rem;
+            border: 2px solid #cbd5e0;
+        }
+        .action-button {
+            @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 disabled:from-gray-500 disabled:to-gray-600 disabled:transform-none disabled:cursor-not-allowed;
+        }
+        .input-field {
+            @apply p-4 border border-gray-600 rounded-xl bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
+        }
+        .game-code {
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            letter-spacing: 0.2em;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+        .player-card {
+            background: linear-gradient(145deg, #4a5568, #2d3748);
+            border: 1px solid #718096;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        .player-card:hover {
+            border-color: #63b3ed;
+            box-shadow: 0 0 20px rgba(99, 179, 237, 0.2);
+        }
+        .current-player {
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-2">
+                Covardia - RJ
+            </h1>
+            <p class="text-gray-400">Jogo online para 2-6 jogadores</p>
+        </div>
+
+        <!-- Lobby Section -->
+        <div id="lobby-section" class="space-y-6">
+            <div class="max-w-md mx-auto bg-gray-800 rounded-xl p-6 shadow-xl">
+                <h2 class="text-2xl font-semibold text-center mb-6 text-yellow-300">Entrar no Jogo</h2>
+                <div class="space-y-4">
+                    <input type="text" id="player-name" placeholder="Seu nome" class="input-field w-full" maxlength="20">
+                    <input type="text" id="room-code" placeholder="Código da sala (6 dígitos)" class="input-field w-full" maxlength="6" pattern="[0-9]{6}">
+                    <button id="join-btn" class="action-button w-full">Entrar na Sala</button>
+                    <div class="text-center text-gray-400">ou</div>
+                    <button id="create-btn" class="action-button bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 w-full">Criar Nova Sala</button>
+                </div>
+            </div>
+
+            <!-- Waiting Room -->
+            <div id="waiting-room" class="hidden max-w-2xl mx-auto">
+                <div class="bg-gray-800 rounded-xl p-6 shadow-xl">
+                    <div class="text-center mb-6">
+                        <h3 class="text-2xl font-semibold text-yellow-300 mb-2">Sala Criada!</h3>
+                        <p class="text-gray-300 mb-4">Compartilhe este código com seus amigos:</p>
+                        <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                            <span id="display-room-code" class="game-code">000000</span>
+                        </div>
+                        <button id="copy-code" class="action-button bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
+                            📋 Copiar Código
+                        </button>
+                    </div>
+
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold mb-3 text-center">Jogadores na Sala (<span id="player-count">1</span>/6)</h4>
+                        <div id="players-list" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <!-- Players will be added here -->
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 justify-center">
+                        <button id="start-game" class="action-button bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-500 disabled:to-gray-600" disabled>
+                            🎮 Iniciar Jogo (Min 2)
+                        </button>
+                        <button id="leave-room" class="action-button bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800">
+                            🚪 Sair da Sala
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Section -->
+        <div id="game-section" class="hidden space-y-6">
+            <!-- Game Header -->
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 text-center">
+                <h2 class="text-xl font-bold mb-2">🎯 Sala: <span id="game-room-code" class="game-code text-sm">000000</span></h2>
+                <p class="text-lg">
+                    <span class="text-yellow-300">Vez de:</span> 
+                    <span id="current-player-name" class="font-bold text-white">...</span>
+                </p>
+            </div>
+
+            <!-- Action Status -->
+            <div id="action-status" class="hidden bg-orange-600 rounded-xl p-4 text-center">
+                <p id="action-description" class="text-white font-semibold mb-2">...</p>
+                <div id="action-timer" class="hidden">
+                    <p class="text-orange-200">Tempo para contestar: <span id="timer-seconds" class="font-bold">10</span>s</p>
+                </div>
+            </div>
+
+            <!-- Players Grid -->
+            <div id="game-players" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Game players will be rendered here -->
+            </div>
+
+            <!-- Your Hand -->
+            <div id="your-hand" class="bg-gray-800 rounded-xl p-6">
+                <h3 class="text-xl font-semibold text-center mb-4 text-yellow-300">🂠 Sua Mão</h3>
+                <div class="mb-4">
+                    <div id="your-cards" class="flex gap-3 justify-center mb-4">
+                        <!-- Your cards will be shown here -->
+                    </div>
+                    <p class="text-center text-xl">
+                        💰 Notas de 100: <span id="your-coins" class="text-yellow-400 font-bold">2</span>
+                    </p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <button id="btn-income" class="action-button text-sm py-2">💼 Trampo (1)</button>
+                    <button id="btn-foreign-aid" class="action-button text-sm py-2">🏛️ Bolsa (2)</button>
+                    <button id="btn-coup" class="action-button bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-sm py-2">⚔️ Golpe (7)</button>
+                    <button id="btn-tax" class="action-button bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-sm py-2">🏦 Cobrança</button>
+                    <button id="btn-steal" class="action-button bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-sm py-2">💸 Taxa</button>
+                    <button id="btn-assassinate" class="action-button bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-sm py-2">🔫 Queima</button>
+                    <button id="btn-exchange" class="action-button bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-sm py-2">🔄 Troca</button>
+                </div>
+
+                <!-- Interaction Buttons -->
+                <div id="interaction-buttons" class="hidden grid grid-cols-2 gap-4">
+                    <button id="btn-challenge" class="action-button bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800">
+                        ❌ Contestar
+                    </button>
+                    <button id="btn-block" class="action-button bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
+                        🛡️ Bloquear  
+                    </button>
+                </div>
+            </div>
+
+            <!-- Game Log -->
+            <div class="bg-gray-800 rounded-xl p-4">
+                <h3 class="text-lg font-semibold mb-3 text-yellow-300">📜 Log do Jogo</h3>
+                <div id="game-log" class="h-32 overflow-y-auto space-y-1 text-sm">
+                    <div class="text-gray-400 italic">Jogo iniciado...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="game-over" class="hidden text-center space-y-6">
+            <div class="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl p-8">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">🏆 Jogo Terminado!</h2>
+                <p class="text-2xl text-gray-800">Vencedor: <span id="winner-name" class="font-bold">...</span></p>
+            </div>
+            <button id="play-again" class="action-button bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
+                🔄 Jogar Novamente
+            </button>
+        </div>
+
+        <!-- Modals -->
+        
+        <!-- Target Selection Modal -->
+        <div id="target-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                <h3 class="text-xl font-bold mb-4 text-center text-yellow-300">🎯 Escolha um Alvo</h3>
+                <div id="target-options" class="space-y-2 mb-4">
+                    <!-- Target buttons will be added here -->
+                </div>
+                <button id="cancel-target" class="action-button bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 w-full">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- Challenge Modal -->
+        <div id="challenge-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                <h3 class="text-xl font-bold mb-4 text-center text-red-400">❌ Contestar Ação</h3>
+                <p id="challenge-text" class="text-gray-300 text-center mb-6">...</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="confirm-challenge" class="action-button bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800">Contestar</button>
+                    <button id="cancel-challenge" class="action-button bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Block Modal -->
+        <div id="block-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                <h3 class="text-xl font-bold mb-4 text-center text-purple-400">🛡️ Bloquear Ação</h3>
+                <p id="block-text" class="text-gray-300 text-center mb-4">...</p>
+                <div id="block-options" class="space-y-2 mb-4">
+                    <!-- Block options will be added here -->
+                </div>
+                <button id="cancel-block" class="action-button bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 w-full">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- Lose Influence Modal -->
+        <div id="lose-influence-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                <h3 class="text-xl font-bold mb-4 text-center text-red-400">💀 Perder Influência</h3>
+                <p id="lose-influence-text" class="text-gray-300 text-center mb-4">...</p>
+                <div id="lose-influence-cards" class="flex gap-3 justify-center">
+                    <!-- Cards to lose will be shown here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Configuração Firebase simplificada
+        // Para uso real, você deve criar um projeto Firebase e substituir esta configuração
+        
+        // Sistema de WebSocket simples para demonstração
+        // Em produção, use Firebase Firestore para persistência real
+        class SimpleGameServer {
+            constructor() {
+                this.rooms = new Map();
+                this.connections = new Set();
+            }
+            
+            generateRoomCode() {
+                return Math.floor(100000 + Math.random() * 900000).toString();
+            }
+            
+            createRoom(playerName) {
+                const code = this.generateRoomCode();
+                const room = {
+                    code: code,
+                    host: playerName,
+                    players: [{
+                        name: playerName,
+                        id: 'player-' + Date.now(),
+                        coins: 2,
+                        cards: [],
+                        eliminated: false
+                    }],
+                    state: 'waiting', // waiting, playing, finished
+                    currentPlayerIndex: 0,
+                    pendingAction: null,
+                    log: [`${playerName} criou a sala`],
+                    deck: []
+                };
+                this.rooms.set(code, room);
+                return { success: true, room, playerId: room.players[0].id };
+            }
+            
+            joinRoom(code, playerName) {
+                const room = this.rooms.get(code);
+                if (!room) {
+                    return { success: false, error: 'Sala não encontrada' };
+                }
+                if (room.players.length >= 6) {
+                    return { success: false, error: 'Sala cheia' };
+                }
+                if (room.state !== 'waiting') {
+                    return { success: false, error: 'Jogo já iniciado' };
+                }
+                
+                const player = {
+                    name: playerName,
+                    id: 'player-' + Date.now(),
+                    coins: 2,
+                    cards: [],
+                    eliminated: false
+                };
+                
+                room.players.push(player);
+                room.log.push(`${playerName} entrou na sala`);
+                
+                return { success: true, room, playerId: player.id };
+            }
+            
+            startGame(code, playerId) {
+                const room = this.rooms.get(code);
+                if (!room || room.players[0].id !== playerId) {
+                    return { success: false, error: 'Apenas o host pode iniciar' };
+                }
+                if (room.players.length < 2) {
+                    return { success: false, error: 'Mínimo 2 jogadores' };
+                }
+                
+                // Setup deck
+                const cards = ['Agiota', 'Pistoleiro', 'Do Job', 'Miliciano', 'Despachante'];
+                const fullDeck = [...cards, ...cards, ...cards];
+                
+                // Shuffle deck
+                for (let i = fullDeck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [fullDeck[i], fullDeck[j]] = [fullDeck[j], fullDeck[i]];
+                }
+                
+                // Deal cards
+                room.players.forEach(player => {
+                    player.cards = [fullDeck.pop(), fullDeck.pop()];
+                });
+                
+                room.deck = fullDeck;
+                room.state = 'playing';
+                room.log.push('Jogo iniciado! Todos receberam 2 cartas.');
+                
+                return { success: true, room };
+            }
+            
+            performAction(code, playerId, action) {
+                const room = this.rooms.get(code);
+                if (!room || room.state !== 'playing') {
+                    return { success: false, error: 'Jogo inválido' };
+                }
+                
+                const playerIndex = room.players.findIndex(p => p.id === playerId);
+                if (playerIndex === -1 || room.currentPlayerIndex !== playerIndex) {
+                    return { success: false, error: 'Não é sua vez' };
+                }
+                
+                const player = room.players[playerIndex];
+                
+                // Process action
+                let logMessage = '';
+                switch (action.type) {
+                    case 'income':
+                        player.coins += 1;
+                        logMessage = `${player.name} fez Trampo do Dia (+1 nota)`;
+                        break;
+                    case 'foreign-aid':
+                        player.coins += 2;
+                        logMessage = `${player.name} pegou Bolsa Família (+2 notas)`;
+                        break;
+                    case 'coup':
+                        if (player.coins < 7) return { success: false, error: 'Não tem moedas suficientes' };
+                        player.coins -= 7;
+                        const target = room.players.find(p => p.id === action.targetId);
+                        if (target && target.cards.length > 0) {
+                            const lostCard = target.cards.pop();
+                            if (target.cards.length === 0) target.eliminated = true;
+                            logMessage = `${player.name} fez Golpe em ${target.name} (-7 notas)`;
+                        }
+                        break;
+                    case 'tax':
+                        player.coins += 3;
+                        logMessage = `${player.name} fez Cobrança (Agiota) (+3 notas)`;
+                        break;
+                }
+                
+                room.log.push(logMessage);
+                
+                // Next turn
+                const activePlayers = room.players.filter(p => !p.eliminated);
+                if (activePlayers.length === 1) {
+                    room.state = 'finished';
+                    room.winner = activePlayers[0].name;
+                    room.log.push(`${room.winner} venceu o jogo!`);
+                } else {
+                    do {
+                        room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
+                    } while (room.players[room.currentPlayerIndex].eliminated);
+                }
+                
+                return { success: true, room };
+            }
+        }
+
+        // Character Images
+        const CHARACTER_IMAGES = {
+            'Agiota': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/j95lqqcr_Agiota.png',
+            'Pistoleiro': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/213oq7dm_Pistoleiro.png',
+            'Do Job': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/rt1p64c3_Do%20Job.png',
+            'Miliciano': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/0dkmxmvw_Milicia.png',
+            'Despachante': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/c6941umo_Despachante.png'
+        };
+
+        // Global state
+        let gameServer = new SimpleGameServer();
+        let currentRoom = null;
+        let playerId = null;
+        let playerName = null;
+        let gameInterval = null;
+
+        // DOM elements
+        const sections = {
+            lobby: document.getElementById('lobby-section'),
+            waiting: document.getElementById('waiting-room'),
+            game: document.getElementById('game-section'),
+            gameOver: document.getElementById('game-over')
+        };
+
+        // Utility functions
+        function showSection(section) {
+            Object.values(sections).forEach(s => s.classList.add('hidden'));
+            sections[section].classList.remove('hidden');
+        }
+
+        function showMessage(message, type = 'info') {
+            // Simple message display - could be enhanced with proper modals
+            alert(message);
+        }
+
+        function renderCard(cardName, isClickable = false, onClick = null) {
+            const card = document.createElement('div');
+            card.className = `card ${isClickable ? 'cursor-pointer hover:bg-gray-600' : ''}`;
+            
+            if (CHARACTER_IMAGES[cardName]) {
+                card.innerHTML = `
+                    <img src="${CHARACTER_IMAGES[cardName]}" alt="${cardName}" class="card-image">
+                    <span class="text-sm">${cardName}</span>
+                `;
+            } else {
+                card.textContent = cardName;
+            }
+            
+            if (isClickable && onClick) {
+                card.addEventListener('click', onClick);
+            }
+            
+            return card;
+        }
+
+        function addToLog(message) {
+            const logElement = document.getElementById('game-log');
+            const entry = document.createElement('div');
+            entry.className = 'text-gray-300 p-2 border-l-2 border-blue-500 pl-3 bg-gray-900 rounded-r';
+            entry.textContent = message;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function updateGameDisplay() {
+            if (!currentRoom || currentRoom.state !== 'playing') return;
+
+            const myPlayer = currentRoom.players.find(p => p.id === playerId);
+            const currentPlayer = currentRoom.players[currentRoom.currentPlayerIndex];
+
+            // Update header
+            document.getElementById('game-room-code').textContent = currentRoom.code;
+            document.getElementById('current-player-name').textContent = currentPlayer.name;
+
+            // Update your hand
+            const yourCardsDiv = document.getElementById('your-cards');
+            yourCardsDiv.innerHTML = '';
+            myPlayer.cards.forEach(cardName => {
+                yourCardsDiv.appendChild(renderCard(cardName));
+            });
+            document.getElementById('your-coins').textContent = myPlayer.coins;
+
+            // Update players grid
+            const playersGrid = document.getElementById('game-players');
+            playersGrid.innerHTML = '';
+            currentRoom.players.forEach((player, index) => {
+                const isCurrentPlayer = index === currentRoom.currentPlayerIndex;
+                const isMe = player.id === playerId;
+                
+                const playerDiv = document.createElement('div');
+                playerDiv.className = `player-card ${isCurrentPlayer ? 'current-player' : ''} ${player.eliminated ? 'opacity-50' : ''}`;
+                
+                playerDiv.innerHTML = `
+                    <h4 class="font-bold text-lg mb-2 ${isMe ? 'text-yellow-300' : 'text-white'}">
+                        ${player.name} ${isMe ? '(Você)' : ''} ${isCurrentPlayer ? '👑' : ''}
+                    </h4>
+                    <div class="flex justify-between items-center mb-2">
+                        <span>💰 ${player.coins} notas</span>
+                        <span>🂠 ${player.cards.length} cartas</span>
+                    </div>
+                    ${player.eliminated ? '<p class="text-red-400 font-bold">ELIMINADO</p>' : ''}
+                `;
+                
+                playersGrid.appendChild(playerDiv);
+            });
+
+            // Update action buttons
+            const isMyTurn = currentPlayer.id === playerId;
+            const actionButtons = ['btn-income', 'btn-foreign-aid', 'btn-coup', 'btn-tax', 'btn-steal', 'btn-assassinate', 'btn-exchange'];
+            actionButtons.forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                btn.disabled = !isMyTurn || myPlayer.eliminated;
+            });
+
+            // Special cases
+            document.getElementById('btn-coup').disabled = !isMyTurn || myPlayer.coins < 7 || myPlayer.eliminated;
+            document.getElementById('btn-assassinate').disabled = !isMyTurn || myPlayer.coins < 3 || myPlayer.eliminated;
+
+            // Force coup at 10+ coins
+            if (isMyTurn && myPlayer.coins >= 10) {
+                actionButtons.forEach(btnId => {
+                    if (btnId !== 'btn-coup') {
+                        document.getElementById(btnId).disabled = true;
+                    }
+                });
+                showMessage('Você tem 10+ notas e deve fazer um Golpe!');
+            }
+
+            // Update game log
+            const gameLog = document.getElementById('game-log');
+            gameLog.innerHTML = '';
+            currentRoom.log.forEach(message => addToLog(message));
+        }
+
+        function pollGameState() {
+            if (currentRoom && currentRoom.code) {
+                // In a real implementation, this would be Firebase listeners
+                // For demo, we just update the display
+                updateGameDisplay();
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('create-btn').addEventListener('click', () => {
+            const name = document.getElementById('player-name').value.trim();
+            if (!name) {
+                showMessage('Digite seu nome!');
+                return;
+            }
+
+            const result = gameServer.createRoom(name);
+            if (result.success) {
+                currentRoom = result.room;
+                playerId = result.playerId;
+                playerName = name;
+                
+                document.getElementById('display-room-code').textContent = currentRoom.code;
+                document.getElementById('player-count').textContent = currentRoom.players.length;
+                
+                updatePlayersListInWaiting();
+                showSection('waiting');
+                
+                // Start polling for updates
+                gameInterval = setInterval(pollGameState, 1000);
+            } else {
+                showMessage(result.error);
+            }
+        });
+
+        document.getElementById('join-btn').addEventListener('click', () => {
+            const name = document.getElementById('player-name').value.trim();
+            const code = document.getElementById('room-code').value.trim();
+            
+            if (!name || !code) {
+                showMessage('Digite seu nome e o código da sala!');
+                return;
+            }
+            
+            if (code.length !== 6) {
+                showMessage('O código deve ter 6 dígitos!');
+                return;
+            }
+
+            const result = gameServer.joinRoom(code, name);
+            if (result.success) {
+                currentRoom = result.room;
+                playerId = result.playerId;
+                playerName = name;
+                
+                document.getElementById('display-room-code').textContent = currentRoom.code;
+                document.getElementById('player-count').textContent = currentRoom.players.length;
+                
+                updatePlayersListInWaiting();
+                showSection('waiting');
+                
+                // Start polling for updates
+                gameInterval = setInterval(pollGameState, 1000);
+            } else {
+                showMessage(result.error);
+            }
+        });
+
+        document.getElementById('start-game').addEventListener('click', () => {
+            if (currentRoom && currentRoom.players.length >= 2) {
+                const result = gameServer.startGame(currentRoom.code, playerId);
+                if (result.success) {
+                    currentRoom = result.room;
+                    showSection('game');
+                    updateGameDisplay();
+                } else {
+                    showMessage(result.error);
+                }
+            }
+        });
+
+        document.getElementById('copy-code').addEventListener('click', async () => {
+            const code = currentRoom?.code;
+            if (code) {
+                try {
+                    await navigator.clipboard.writeText(code);
+                    showMessage('Código copiado!');
+                } catch (err) {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = code;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    showMessage('Código copiado!');
+                }
+            }
+        });
+
+        document.getElementById('leave-room').addEventListener('click', () => {
+            if (gameInterval) {
+                clearInterval(gameInterval);
+                gameInterval = null;
+            }
+            currentRoom = null;
+            playerId = null;
+            playerName = null;
+            showSection('lobby');
+        });
+
+        // Action buttons
+        document.getElementById('btn-income').addEventListener('click', () => {
+            performAction({ type: 'income' });
+        });
+
+        document.getElementById('btn-foreign-aid').addEventListener('click', () => {
+            performAction({ type: 'foreign-aid' });
+        });
+
+        document.getElementById('btn-coup').addEventListener('click', () => {
+            showTargetSelection('coup');
+        });
+
+        document.getElementById('btn-tax').addEventListener('click', () => {
+            performAction({ type: 'tax' });
+        });
+
+        function performAction(action) {
+            if (!currentRoom || !playerId) return;
+            
+            const result = gameServer.performAction(currentRoom.code, playerId, action);
+            if (result.success) {
+                currentRoom = result.room;
+                updateGameDisplay();
+                
+                if (currentRoom.state === 'finished') {
+                    document.getElementById('winner-name').textContent = currentRoom.winner;
+                    showSection('gameOver');
+                }
+            } else {
+                showMessage(result.error);
+            }
+        }
+
+        function showTargetSelection(actionType) {
+            const targetOptions = document.getElementById('target-options');
+            targetOptions.innerHTML = '';
+            
+            const validTargets = currentRoom.players.filter(p => 
+                p.id !== playerId && !p.eliminated && p.cards.length > 0
+            );
+            
+            if (validTargets.length === 0) {
+                showMessage('Não há alvos válidos!');
+                return;
+            }
+            
+            validTargets.forEach(player => {
+                const button = document.createElement('button');
+                button.className = 'action-button w-full';
+                button.textContent = player.name;
+                button.onclick = () => {
+                    document.getElementById('target-modal').classList.add('hidden');
+                    performAction({ type: actionType, targetId: player.id });
+                };
+                targetOptions.appendChild(button);
+            });
+            
+            document.getElementById('target-modal').classList.remove('hidden');
+        }
+
+        function updatePlayersListInWaiting() {
+            const playersList = document.getElementById('players-list');
+            playersList.innerHTML = '';
+            
+            currentRoom.players.forEach((player, index) => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'bg-gray-700 rounded-lg p-3 text-center';
+                playerDiv.innerHTML = `
+                    <div class="font-semibold ${player.id === playerId ? 'text-yellow-300' : 'text-white'}">
+                        ${player.name}
+                    </div>
+                    <div class="text-sm text-gray-400">
+                        ${index === 0 ? '👑 Host' : 'Jogador'}
+                        ${player.id === playerId ? ' (Você)' : ''}
+                    </div>
+                `;
+                playersList.appendChild(playerDiv);
+            });
+            
+            // Enable start button if host and enough players
+            const startBtn = document.getElementById('start-game');
+            const isHost = currentRoom.players[0].id === playerId;
+            const hasEnoughPlayers = currentRoom.players.length >= 2;
+            startBtn.disabled = !isHost || !hasEnoughPlayers;
+        }
+
+        // Modal close buttons
+        document.getElementById('cancel-target').addEventListener('click', () => {
+            document.getElementById('target-modal').classList.add('hidden');
+        });
+
+        // Initialize
+        showSection('lobby');
+        
+        // Update waiting room periodically
+        setInterval(() => {
+            if (currentRoom && currentRoom.state === 'waiting') {
+                updatePlayersListInWaiting();
+                document.getElementById('player-count').textContent = currentRoom.players.length;
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
