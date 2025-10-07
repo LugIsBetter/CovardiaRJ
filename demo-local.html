@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covardia - RJ (Demo Local)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .game-container {
+            background-color: #2d3748;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            max-width: 1000px;
+            width: 100%;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .card {
+            background-color: #4a5568;
+            color: #cbd5e0;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            min-width: 100px;
+            min-height: 120px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .card-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 0.5rem;
+        }
+        .action-button {
+            @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 disabled:bg-gray-500 disabled:transform-none disabled:cursor-not-allowed;
+        }
+        .challenge-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="text-3xl font-bold text-center text-blue-400 mb-6">Covardia - RJ (Demo)</h1>
+
+        <!-- Setup Section -->
+        <div id="setup-section" class="flex flex-col items-center gap-4">
+            <div class="w-full max-w-md bg-gray-800 rounded-xl p-6 shadow-xl">
+                <h3 class="text-lg font-semibold mb-4 text-center">Setup Demo</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Número de Jogadores:</label>
+                        <select id="player-count-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                            <option value="2">2 jogadores</option>
+                            <option value="3">3 jogadores</option>
+                            <option value="4">4 jogadores</option>
+                            <option value="5">5 jogadores</option>
+                            <option value="6">6 jogadores</option>
+                        </select>
+                    </div>
+                    <button id="start-demo-btn" class="action-button w-full">Iniciar Demo</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Section -->
+        <div id="game-section" class="hidden">
+            <!-- Turn Info -->
+            <div class="bg-indigo-700 p-3 rounded-lg shadow-md text-center mb-4">
+                <p class="text-lg font-semibold text-white">Vez de: <span id="current-player" class="font-bold text-yellow-300"></span></p>
+            </div>
+
+            <!-- Action Status -->
+            <div id="action-status" class="hidden bg-orange-600 p-3 rounded-lg shadow-md text-center mb-4">
+                <p id="action-text" class="text-white font-semibold"></p>
+                <div id="timer-container" class="hidden mt-2">
+                    <p class="text-sm">Tempo para contestar: <span id="timer" class="font-bold">10</span>s</p>
+                </div>
+            </div>
+
+            <!-- Players Grid -->
+            <div id="players-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <!-- Players will be rendered here -->
+            </div>
+
+            <!-- Current Player Actions -->
+            <div id="player-actions" class="bg-gray-800 p-6 rounded-xl shadow-xl mb-6">
+                <h3 class="text-xl font-semibold text-center mb-4">Suas Ações</h3>
+                
+                <!-- Your Cards -->
+                <div class="mb-4">
+                    <h4 class="text-lg font-semibold mb-2">Suas Cartas:</h4>
+                    <div id="your-cards" class="flex gap-3 justify-center mb-4">
+                        <!-- Cards will be rendered here -->
+                    </div>
+                    <p class="text-center text-xl">Notas de 100: <span id="your-coins" class="text-yellow-400 font-bold">2</span></p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <button id="action-income" class="action-button text-sm">Trampo do Dia (1)</button>
+                    <button id="action-foreign-aid" class="action-button text-sm">Bolsa Família (2)</button>
+                    <button id="action-coup" class="action-button bg-red-700 hover:bg-red-800 text-sm">Tomar o Morro (7)</button>
+                    <button id="action-tax" class="action-button bg-teal-600 hover:bg-teal-700 text-sm">Cobrança (Agiota)</button>
+                    <button id="action-steal" class="action-button bg-teal-600 hover:bg-teal-700 text-sm">Taxa (Miliciano)</button>
+                    <button id="action-assassinate" class="action-button bg-teal-600 hover:bg-teal-700 text-sm">Queima (Pistoleiro)</button>
+                    <button id="action-exchange" class="action-button bg-teal-600 hover:bg-teal-700 text-sm">Troca (Despachante)</button>
+                </div>
+
+                <!-- Interaction Buttons -->
+                <div id="interaction-buttons" class="hidden grid grid-cols-2 gap-4 mt-4">
+                    <button id="challenge-btn" class="action-button bg-red-600 hover:bg-red-700">Contestar!</button>
+                    <button id="block-btn" class="action-button bg-purple-600 hover:bg-purple-700">Bloquear!</button>
+                </div>
+            </div>
+
+            <!-- Game Log -->
+            <div class="bg-gray-800 p-4 rounded-xl shadow-inner">
+                <h3 class="text-lg font-semibold mb-2">Log do Jogo</h3>
+                <div id="game-log" class="h-40 overflow-y-auto space-y-1 text-sm text-gray-400">
+                    <!-- Log entries will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Section -->
+        <div id="game-over-section" class="hidden text-center">
+            <h2 class="text-4xl font-bold text-yellow-400 mb-4">Jogo Terminado!</h2>
+            <p class="text-2xl text-white mb-6">Vencedor: <span id="winner-name" class="font-bold text-yellow-300"></span>!</p>
+            <button id="restart-btn" class="action-button">Jogar Novamente</button>
+        </div>
+
+        <!-- Modals -->
+        
+        <!-- Target Selection Modal -->
+        <div id="target-modal" class="hidden challenge-overlay">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full">
+                <h3 class="text-2xl text-white font-bold mb-4 text-center">Escolha um Alvo</h3>
+                <div id="target-list" class="space-y-2 mb-4">
+                    <!-- Target buttons will be added here -->
+                </div>
+                <button id="cancel-target" class="action-button bg-gray-600 hover:bg-gray-700 w-full">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- Challenge Modal -->
+        <div id="challenge-modal" class="hidden challenge-overlay">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full">
+                <h3 class="text-2xl text-white font-bold mb-4 text-center">Contestar Ação</h3>
+                <p id="challenge-description" class="text-gray-300 text-center mb-6"></p>
+                <div class="flex gap-4">
+                    <button id="confirm-challenge" class="action-button bg-red-600 hover:bg-red-700 flex-1">Contestar</button>
+                    <button id="cancel-challenge" class="action-button bg-gray-600 hover:bg-gray-700 flex-1">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Block Modal -->
+        <div id="block-modal" class="hidden challenge-overlay">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full">
+                <h3 class="text-2xl text-white font-bold mb-4 text-center">Bloquear Ação</h3>
+                <p id="block-description" class="text-gray-300 text-center mb-4"></p>
+                <div id="block-options" class="space-y-2 mb-4">
+                    <!-- Block options will be added here -->
+                </div>
+                <button id="cancel-block" class="action-button bg-gray-600 hover:bg-gray-700 w-full">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- Lose Influence Modal -->
+        <div id="lose-influence-modal" class="hidden challenge-overlay">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full">
+                <h3 class="text-2xl text-white font-bold mb-4 text-center">Perder Influência</h3>
+                <p id="lose-influence-reason" class="text-gray-300 text-center mb-4"></p>
+                <div id="lose-influence-cards" class="flex gap-3 justify-center">
+                    <!-- Cards to lose will be shown here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Exchange Modal -->
+        <div id="exchange-modal" class="hidden challenge-overlay">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-lg w-full">
+                <h3 class="text-2xl text-white font-bold mb-4 text-center">Troca de Contatos</h3>
+                
+                <div class="mb-4">
+                    <h4 class="text-lg mb-2">Suas cartas:</h4>
+                    <div id="exchange-your-cards" class="flex gap-3 justify-center mb-4">
+                        <!-- Current cards -->
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="text-lg mb-2">Cartas do baralho (selecione até 2):</h4>
+                    <div id="exchange-deck-cards" class="flex gap-3 justify-center">
+                        <!-- Deck cards -->
+                    </div>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button id="confirm-exchange" class="action-button bg-green-600 hover:bg-green-700 flex-1">Confirmar</button>
+                    <button id="cancel-exchange" class="action-button bg-gray-600 hover:bg-gray-700 flex-1">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            players: [],
+            currentPlayerIndex: 0,
+            deck: [],
+            pendingAction: null,
+            gameLog: [],
+            gamePhase: 'setup' // setup, playing, gameOver
+        };
+
+        let challengeTimer = null;
+        let selectedExchangeCards = [];
+
+        // Character Images
+        const CHARACTER_IMAGES = {
+            'Agiota': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/j95lqqcr_Agiota.png',
+            'Pistoleiro': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/213oq7dm_Pistoleiro.png',
+            'Do Job': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/rt1p64c3_Do%20Job.png',
+            'Miliciano': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/0dkmxmvw_Milicia.png',
+            'Despachante': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/c6941umo_Despachante.png'
+        };
+
+        const DECK_CARDS = ['Agiota', 'Pistoleiro', 'Do Job', 'Miliciano', 'Despachante'];
+
+        // Utility Functions
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function addToLog(message) {
+            gameState.gameLog.push(message);
+            updateLogDisplay();
+        }
+
+        function updateLogDisplay() {
+            const logElement = document.getElementById('game-log');
+            logElement.innerHTML = gameState.gameLog.slice().reverse().map(msg => 
+                `<div class="p-2 border-b border-gray-600">${msg}</div>`
+            ).join('');
+        }
+
+        function renderCard(cardName, isClickable = false, onClick = null) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = `card ${isClickable ? 'cursor-pointer hover:bg-gray-600' : ''}`;
+            
+            if (CHARACTER_IMAGES[cardName]) {
+                cardDiv.innerHTML = `
+                    <img src="${CHARACTER_IMAGES[cardName]}" alt="${cardName}" class="card-image">
+                    <span class="text-sm">${cardName}</span>
+                `;
+            } else {
+                cardDiv.textContent = cardName;
+            }
+            
+            if (isClickable && onClick) {
+                cardDiv.addEventListener('click', onClick);
+            }
+            
+            return cardDiv;
+        }
+
+        // Game Initialization
+        function initGame(playerCount) {
+            gameState.players = [];
+            
+            // Create players
+            for (let i = 0; i < playerCount; i++) {
+                gameState.players.push({
+                    id: i,
+                    name: `Jogador ${i + 1}`,
+                    coins: 2,
+                    cards: [],
+                    eliminated: false
+                });
+            }
+
+            // Create and shuffle deck
+            gameState.deck = shuffleArray([...DECK_CARDS, ...DECK_CARDS, ...DECK_CARDS]);
+
+            // Deal cards
+            gameState.players.forEach(player => {
+                player.cards = [gameState.deck.pop(), gameState.deck.pop()];
+            });
+
+            gameState.currentPlayerIndex = 0;
+            gameState.pendingAction = null;
+            gameState.gameLog = [];
+            gameState.gamePhase = 'playing';
+
+            addToLog('Jogo iniciado! Todos os jogadores receberam 2 cartas e 2 notas.');
+
+            // Show game section
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+
+            updateGameDisplay();
+        }
+
+        function updateGameDisplay() {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            document.getElementById('current-player').textContent = currentPlayer.name;
+
+            // Update players grid
+            const playersGrid = document.getElementById('players-grid');
+            playersGrid.innerHTML = '';
+
+            gameState.players.forEach((player, index) => {
+                const isCurrentPlayer = index === gameState.currentPlayerIndex;
+                const playerDiv = document.createElement('div');
+                playerDiv.className = `bg-gray-700 p-4 rounded-lg shadow-md ${player.eliminated ? 'opacity-50' : ''} ${isCurrentPlayer ? 'ring-2 ring-blue-500' : ''}`;
+                
+                playerDiv.innerHTML = `
+                    <h4 class="font-bold text-lg mb-2">${player.name} ${isCurrentPlayer ? '(Sua vez)' : ''}</h4>
+                    <p class="mb-1">Notas: <span class="text-yellow-400 font-bold">${player.coins}</span></p>
+                    <p class="mb-2">Influências: ${player.cards.length} ${player.eliminated ? '(Eliminado)' : ''}</p>
+                    ${index === gameState.currentPlayerIndex ? `
+                        <div class="grid grid-cols-2 gap-2 mt-3">
+                            ${player.cards.map(card => `
+                                <div class="card text-xs p-2 min-h-16">
+                                    ${CHARACTER_IMAGES[card] ? `<img src="${CHARACTER_IMAGES[card]}" alt="${card}" class="w-8 h-8 rounded-full mx-auto mb-1">` : ''}
+                                    <div>${card}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+
+                playersGrid.appendChild(playerDiv);
+            });
+
+            // Update your info (current player)
+            const yourCardsDiv = document.getElementById('your-cards');
+            yourCardsDiv.innerHTML = '';
+            currentPlayer.cards.forEach(cardName => {
+                const cardElement = renderCard(cardName);
+                yourCardsDiv.appendChild(cardElement);
+            });
+
+            document.getElementById('your-coins').textContent = currentPlayer.coins;
+
+            // Update action buttons
+            updateActionButtons();
+        }
+
+        function updateActionButtons() {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            const hasPendingAction = gameState.pendingAction !== null;
+            const isEliminated = currentPlayer.eliminated;
+
+            // Basic actions
+            document.getElementById('action-income').disabled = hasPendingAction || isEliminated;
+            document.getElementById('action-foreign-aid').disabled = hasPendingAction || isEliminated;
+            document.getElementById('action-coup').disabled = hasPendingAction || isEliminated || currentPlayer.coins < 7;
+
+            // Character actions
+            document.getElementById('action-tax').disabled = hasPendingAction || isEliminated;
+            document.getElementById('action-steal').disabled = hasPendingAction || isEliminated;
+            document.getElementById('action-assassinate').disabled = hasPendingAction || isEliminated || currentPlayer.coins < 3;
+            document.getElementById('action-exchange').disabled = hasPendingAction || isEliminated;
+
+            // Force coup if 10+ coins
+            if (currentPlayer.coins >= 10) {
+                document.querySelectorAll('#player-actions button').forEach(btn => btn.disabled = true);
+                document.getElementById('action-coup').disabled = false;
+            }
+
+            // Show/hide interaction buttons
+            const interactionButtons = document.getElementById('interaction-buttons');
+            if (gameState.pendingAction && gameState.pendingAction.playerId !== gameState.currentPlayerIndex) {
+                interactionButtons.classList.remove('hidden');
+                document.getElementById('challenge-btn').disabled = !canChallenge(gameState.pendingAction);
+                document.getElementById('block-btn').disabled = !canBlock(gameState.pendingAction);
+            } else {
+                interactionButtons.classList.add('hidden');
+            }
+        }
+
+        function canChallenge(action) {
+            return ['tax', 'steal', 'assassinate', 'exchange'].includes(action.type);
+        }
+
+        function canBlock(action) {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            if (action.type === 'foreign-aid') return true;
+            if (action.type === 'steal' && action.targetId === gameState.currentPlayerIndex) return true;
+            if (action.type === 'assassinate' && action.targetId === gameState.currentPlayerIndex) return true;
+            return false;
+        }
+
+        // Action Functions
+        function performAction(actionType) {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            
+            if (currentPlayer.eliminated) return;
+
+            if (['coup', 'steal', 'assassinate'].includes(actionType)) {
+                showTargetModal(actionType);
+                return;
+            }
+
+            const action = {
+                type: actionType,
+                playerId: gameState.currentPlayerIndex,
+                targetId: null
+            };
+
+            if (['tax', 'steal', 'assassinate', 'exchange'].includes(actionType)) {
+                // Character actions can be challenged
+                gameState.pendingAction = action;
+                showActionStatus(action);
+                startChallengeTimer();
+            } else {
+                // Basic actions resolve immediately
+                resolveAction(action);
+            }
+
+            updateGameDisplay();
+        }
+
+        function showTargetModal(actionType) {
+            const targetList = document.getElementById('target-list');
+            targetList.innerHTML = '';
+
+            const validTargets = gameState.players.filter((player, index) => 
+                index !== gameState.currentPlayerIndex && !player.eliminated && player.cards.length > 0
+            );
+
+            if (validTargets.length === 0) {
+                alert('Não há alvos válidos!');
+                return;
+            }
+
+            validTargets.forEach((player, index) => {
+                const button = document.createElement('button');
+                button.className = 'action-button w-full';
+                button.textContent = player.name;
+                button.onclick = () => {
+                    document.getElementById('target-modal').classList.add('hidden');
+                    performTargetedAction(actionType, player.id);
+                };
+                targetList.appendChild(button);
+            });
+
+            document.getElementById('target-modal').classList.remove('hidden');
+        }
+
+        function performTargetedAction(actionType, targetId) {
+            const action = {
+                type: actionType,
+                playerId: gameState.currentPlayerIndex,
+                targetId: targetId
+            };
+
+            if (actionType === 'coup') {
+                resolveAction(action);
+            } else {
+                gameState.pendingAction = action;
+                showActionStatus(action);
+                startChallengeTimer();
+            }
+
+            updateGameDisplay();
+        }
+
+        function showActionStatus(action) {
+            const player = gameState.players[action.playerId];
+            const target = action.targetId !== null ? gameState.players[action.targetId] : null;
+            
+            let actionText = '';
+            switch (action.type) {
+                case 'foreign-aid':
+                    actionText = `${player.name} quer pegar Bolsa Família (+2 notas)`;
+                    break;
+                case 'tax':
+                    actionText = `${player.name} quer fazer Cobrança com Agiota (+3 notas)`;
+                    break;
+                case 'steal':
+                    actionText = `${player.name} quer cobrar Taxa de ${target.name} com Miliciano`;
+                    break;
+                case 'assassinate':
+                    actionText = `${player.name} quer fazer Queima de Arquivo em ${target.name} com Pistoleiro`;
+                    break;
+                case 'exchange':
+                    actionText = `${player.name} quer fazer Troca de Contatos com Despachante`;
+                    break;
+            }
+
+            document.getElementById('action-text').textContent = actionText;
+            document.getElementById('action-status').classList.remove('hidden');
+            
+            addToLog(actionText);
+        }
+
+        function startChallengeTimer() {
+            let timeLeft = 10;
+            document.getElementById('timer').textContent = timeLeft;
+            document.getElementById('timer-container').classList.remove('hidden');
+
+            challengeTimer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(challengeTimer);
+                    // Auto-resolve if no challenge/block
+                    if (gameState.pendingAction) {
+                        resolveAction(gameState.pendingAction);
+                    }
+                }
+            }, 1000);
+        }
+
+        function stopChallengeTimer() {
+            if (challengeTimer) {
+                clearInterval(challengeTimer);
+                challengeTimer = null;
+            }
+            document.getElementById('timer-container').classList.add('hidden');
+            document.getElementById('action-status').classList.add('hidden');
+        }
+
+        function resolveAction(action) {
+            stopChallengeTimer();
+            gameState.pendingAction = null;
+
+            const player = gameState.players[action.playerId];
+            const target = action.targetId !== null ? gameState.players[action.targetId] : null;
+
+            switch (action.type) {
+                case 'income':
+                    player.coins += 1;
+                    addToLog(`${player.name} fez Trampo do Dia (+1 nota)`);
+                    break;
+
+                case 'foreign-aid':
+                    player.coins += 2;
+                    addToLog(`${player.name} pegou Bolsa Família (+2 notas)`);
+                    break;
+
+                case 'coup':
+                    if (player.coins >= 7) {
+                        player.coins -= 7;
+                        addToLog(`${player.name} fez Golpe em ${target.name} (-7 notas)`);
+                        showLoseInfluenceModal(action.targetId, 'golpe');
+                        return; // Don't advance turn yet
+                    }
+                    break;
+
+                case 'tax':
+                    player.coins += 3;
+                    addToLog(`${player.name} fez Cobrança (Agiota) (+3 notas)`);
+                    break;
+
+                case 'steal':
+                    const stolen = Math.min(2, target.coins);
+                    target.coins -= stolen;
+                    player.coins += stolen;
+                    addToLog(`${player.name} cobrou Taxa de ${target.name} (Miliciano) (+${stolen} notas)`);
+                    break;
+
+                case 'assassinate':
+                    if (player.coins >= 3) {
+                        player.coins -= 3;
+                        addToLog(`${player.name} fez Queima de Arquivo em ${target.name} (Pistoleiro) (-3 notas)`);
+                        showLoseInfluenceModal(action.targetId, 'assassinato');
+                        return; // Don't advance turn yet
+                    }
+                    break;
+
+                case 'exchange':
+                    addToLog(`${player.name} fez Troca de Contatos (Despachante)`);
+                    showExchangeModal();
+                    return; // Don't advance turn yet
+            }
+
+            nextTurn();
+        }
+
+        function nextTurn() {
+            const activePlayers = gameState.players.filter(p => !p.eliminated);
+            
+            // Check win condition
+            if (activePlayers.length === 1) {
+                endGame(activePlayers[0]);
+                return;
+            }
+
+            // Find next active player
+            do {
+                gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            } while (gameState.players[gameState.currentPlayerIndex].eliminated);
+
+            updateGameDisplay();
+        }
+
+        function endGame(winner) {
+            gameState.gamePhase = 'gameOver';
+            document.getElementById('game-section').classList.add('hidden');
+            document.getElementById('game-over-section').classList.remove('hidden');
+            document.getElementById('winner-name').textContent = winner.name;
+            addToLog(`${winner.name} venceu o jogo!`);
+        }
+
+        // Challenge System
+        function showChallengeModal() {
+            const action = gameState.pendingAction;
+            const player = gameState.players[action.playerId];
+            document.getElementById('challenge-description').textContent = 
+                `Contestar a ação de ${player.name}? Se você estiver errado, perde uma influência.`;
+            document.getElementById('challenge-modal').classList.remove('hidden');
+        }
+
+        function resolveChallenge() {
+            const action = gameState.pendingAction;
+            const actionPlayer = gameState.players[action.playerId];
+            const challenger = gameState.players[gameState.currentPlayerIndex];
+
+            const requiredCard = getRequiredCard(action.type);
+            const hasCard = actionPlayer.cards.includes(requiredCard);
+
+            stopChallengeTimer();
+
+            if (hasCard) {
+                // Challenge failed
+                addToLog(`${challenger.name} contestou ${actionPlayer.name} e perdeu! ${actionPlayer.name} tinha ${requiredCard}.`);
+                
+                // Shuffle action player's card back into deck
+                const cardIndex = actionPlayer.cards.indexOf(requiredCard);
+                actionPlayer.cards.splice(cardIndex, 1);
+                gameState.deck.push(requiredCard);
+                gameState.deck = shuffleArray(gameState.deck);
+                actionPlayer.cards.push(gameState.deck.pop());
+                
+                // Challenger loses influence
+                showLoseInfluenceModal(gameState.currentPlayerIndex, 'contestação falhada');
+                
+                // Action still resolves after influence loss
+                setTimeout(() => {
+                    resolveAction(action);
+                }, 1000);
+                
+            } else {
+                // Challenge succeeded
+                addToLog(`${challenger.name} contestou ${actionPlayer.name} com sucesso! ${actionPlayer.name} não tinha ${requiredCard}.`);
+                
+                gameState.pendingAction = null;
+                
+                // Action player loses influence
+                showLoseInfluenceModal(action.playerId, 'contestação perdida');
+            }
+        }
+
+        function getRequiredCard(actionType) {
+            switch (actionType) {
+                case 'tax': return 'Agiota';
+                case 'steal': return 'Miliciano';
+                case 'assassinate': return 'Pistoleiro';
+                case 'exchange': return 'Despachante';
+                default: return null;
+            }
+        }
+
+        // Block System
+        function showBlockModal() {
+            const action = gameState.pendingAction;
+            const blockOptions = document.getElementById('block-options');
+            blockOptions.innerHTML = '';
+
+            let options = [];
+            if (action.type === 'foreign-aid') {
+                options = ['Agiota'];
+            } else if (action.type === 'steal' && action.targetId === gameState.currentPlayerIndex) {
+                options = ['Miliciano', 'Despachante'];
+            } else if (action.type === 'assassinate' && action.targetId === gameState.currentPlayerIndex) {
+                options = ['Do Job'];
+            }
+
+            options.forEach(character => {
+                const button = document.createElement('button');
+                button.className = 'action-button bg-purple-600 hover:bg-purple-700 w-full';
+                button.textContent = `Bloquear com ${character}`;
+                button.onclick = () => {
+                    document.getElementById('block-modal').classList.add('hidden');
+                    resolveBlock(character);
+                };
+                blockOptions.appendChild(button);
+            });
+
+            document.getElementById('block-description').textContent = 'Escolha o personagem para bloquear:';
+            document.getElementById('block-modal').classList.remove('hidden');
+        }
+
+        function resolveBlock(blockingCharacter) {
+            const blocker = gameState.players[gameState.currentPlayerIndex];
+            stopChallengeTimer();
+            
+            addToLog(`${blocker.name} bloqueou com ${blockingCharacter}!`);
+            gameState.pendingAction = null;
+            
+            nextTurn();
+        }
+
+        // Lose Influence System
+        function showLoseInfluenceModal(playerId, reason) {
+            const player = gameState.players[playerId];
+            
+            if (player.cards.length === 0) return;
+
+            // For demo, auto-select first card if not current player
+            if (playerId !== gameState.currentPlayerIndex) {
+                loseInfluence(playerId, 0);
+                return;
+            }
+
+            document.getElementById('lose-influence-reason').textContent = `Você deve perder uma influência por ${reason}:`;
+            
+            const cardsDiv = document.getElementById('lose-influence-cards');
+            cardsDiv.innerHTML = '';
+
+            player.cards.forEach((cardName, index) => {
+                const cardElement = renderCard(cardName, true, () => {
+                    document.getElementById('lose-influence-modal').classList.add('hidden');
+                    loseInfluence(playerId, index);
+                });
+                cardsDiv.appendChild(cardElement);
+            });
+
+            document.getElementById('lose-influence-modal').classList.remove('hidden');
+        }
+
+        function loseInfluence(playerId, cardIndex) {
+            const player = gameState.players[playerId];
+            const lostCard = player.cards[cardIndex];
+            
+            player.cards.splice(cardIndex, 1);
+            
+            if (player.cards.length === 0) {
+                player.eliminated = true;
+                addToLog(`${player.name} perdeu ${lostCard} e foi eliminado!`);
+            } else {
+                addToLog(`${player.name} perdeu ${lostCard}`);
+            }
+
+            // Check for game end
+            const activePlayers = gameState.players.filter(p => !p.eliminated);
+            if (activePlayers.length === 1) {
+                endGame(activePlayers[0]);
+            } else {
+                nextTurn();
+            }
+
+            updateGameDisplay();
+        }
+
+        // Exchange System
+        function showExchangeModal() {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            selectedExchangeCards = [];
+
+            // Show current cards
+            const yourCardsDiv = document.getElementById('exchange-your-cards');
+            yourCardsDiv.innerHTML = '';
+            currentPlayer.cards.forEach(cardName => {
+                const cardElement = renderCard(cardName);
+                yourCardsDiv.appendChild(cardElement);
+            });
+
+            // Show deck cards (take 2 from deck)
+            const deckCards = [gameState.deck.pop(), gameState.deck.pop()];
+            const deckCardsDiv = document.getElementById('exchange-deck-cards');
+            deckCardsDiv.innerHTML = '';
+
+            deckCards.forEach((cardName, index) => {
+                const cardElement = renderCard(cardName, true, () => {
+                    if (selectedExchangeCards.includes(index)) {
+                        // Deselect
+                        selectedExchangeCards = selectedExchangeCards.filter(i => i !== index);
+                        cardElement.classList.remove('ring-2', 'ring-yellow-400');
+                    } else if (selectedExchangeCards.length < 2) {
+                        // Select
+                        selectedExchangeCards.push(index);
+                        cardElement.classList.add('ring-2', 'ring-yellow-400');
+                    }
+                });
+                deckCardsDiv.appendChild(cardElement);
+            });
+
+            // Store deck cards for later use
+            gameState.tempExchangeCards = deckCards;
+
+            document.getElementById('exchange-modal').classList.remove('hidden');
+        }
+
+        function confirmExchange() {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            const deckCards = gameState.tempExchangeCards;
+
+            // Take selected cards from deck
+            const newCards = selectedExchangeCards.map(index => deckCards[index]);
+            
+            // Put back unused deck cards and old player cards
+            const returnCards = [
+                ...deckCards.filter((_, index) => !selectedExchangeCards.includes(index)),
+                ...currentPlayer.cards
+            ];
+            
+            gameState.deck.push(...returnCards);
+            gameState.deck = shuffleArray(gameState.deck);
+
+            // Update player cards
+            currentPlayer.cards = newCards;
+
+            addToLog(`${currentPlayer.name} trocou ${selectedExchangeCards.length} cartas`);
+            
+            document.getElementById('exchange-modal').classList.add('hidden');
+            nextTurn();
+            updateGameDisplay();
+        }
+
+        // Event Listeners
+        document.getElementById('start-demo-btn').addEventListener('click', () => {
+            const playerCount = parseInt(document.getElementById('player-count-select').value);
+            initGame(playerCount);
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            document.getElementById('game-over-section').classList.add('hidden');
+            document.getElementById('setup-section').classList.remove('hidden');
+        });
+
+        // Action buttons
+        document.getElementById('action-income').addEventListener('click', () => performAction('income'));
+        document.getElementById('action-foreign-aid').addEventListener('click', () => performAction('foreign-aid'));
+        document.getElementById('action-coup').addEventListener('click', () => performAction('coup'));
+        document.getElementById('action-tax').addEventListener('click', () => performAction('tax'));
+        document.getElementById('action-steal').addEventListener('click', () => performAction('steal'));
+        document.getElementById('action-assassinate').addEventListener('click', () => performAction('assassinate'));
+        document.getElementById('action-exchange').addEventListener('click', () => performAction('exchange'));
+
+        // Interaction buttons
+        document.getElementById('challenge-btn').addEventListener('click', showChallengeModal);
+        document.getElementById('block-btn').addEventListener('click', showBlockModal);
+
+        // Modal buttons
+        document.getElementById('cancel-target').addEventListener('click', () => {
+            document.getElementById('target-modal').classList.add('hidden');
+        });
+
+        document.getElementById('confirm-challenge').addEventListener('click', () => {
+            document.getElementById('challenge-modal').classList.add('hidden');
+            resolveChallenge();
+        });
+
+        document.getElementById('cancel-challenge').addEventListener('click', () => {
+            document.getElementById('challenge-modal').classList.add('hidden');
+        });
+
+        document.getElementById('cancel-block').addEventListener('click', () => {
+            document.getElementById('block-modal').classList.add('hidden');
+        });
+
+        document.getElementById('confirm-exchange').addEventListener('click', confirmExchange);
+
+        document.getElementById('cancel-exchange').addEventListener('click', () => {
+            // Return cards to deck
+            if (gameState.tempExchangeCards) {
+                gameState.deck.push(...gameState.tempExchangeCards);
+                gameState.deck = shuffleArray(gameState.deck);
+            }
+            document.getElementById('exchange-modal').classList.add('hidden');
+            nextTurn();
+            updateGameDisplay();
+        });
+    </script>
+</body>
+</html>
