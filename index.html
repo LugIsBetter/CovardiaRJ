@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covardia - RJ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .game-container {
+            background-color: #2d3748;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 900px;
+            width: 100%;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .card {
+            background-color: #4a5568;
+            color: #cbd5e0;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            min-width: 100px;
+            min-height: 120px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+        .card-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 0.5rem;
+        }
+        .action-button {
+            @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 disabled:bg-gray-500 disabled:transform-none disabled:cursor-not-allowed;
+        }
+        .input-field {
+            @apply p-3 border border-gray-600 rounded-xl bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500;
+        }
+        .challenge-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .challenge-timer {
+            display: inline-block;
+            min-width: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="text-3xl font-bold text-center text-blue-400 mb-6">Covardia - RJ</h1>
+
+        <!-- Seção de Lobby -->
+        <div id="lobby-section" class="flex flex-col items-center gap-4">
+            <div class="w-full max-w-md bg-gray-800 rounded-xl p-6 shadow-xl flex flex-col gap-4">
+                <input type="text" id="player-name-input" placeholder="Seu nome" class="input-field w-full">
+                <input type="text" id="game-code-input" placeholder="Código do jogo para entrar" class="input-field w-full">
+                <button id="join-game-btn" class="action-button w-full">Entrar no Jogo</button>
+                <p class="text-center text-gray-400">ou</p>
+                <button id="create-game-btn" class="action-button bg-green-600 hover:bg-green-700 w-full">Criar Novo Jogo</button>
+            </div>
+            
+            <div id="lobby-players-container" class="hidden w-full max-w-md bg-gray-800 rounded-xl p-4 mt-2 shadow-inner">
+                <h3 class="text-lg font-semibold text-center text-gray-200 mb-2">Jogadores na Sala (<span id="player-count">0</span>/6)</h3>
+                <div id="lobby-players-list" class="space-y-2 text-center">
+                    <!-- Nomes dos jogadores serão injetados aqui -->
+                </div>
+            </div>
+
+             <div id="game-code-display" class="hidden w-full max-w-md bg-gray-800 rounded-xl p-4 mt-4 shadow-inner flex flex-col md:flex-row items-center justify-between gap-3">
+                <p class="text-gray-300">Código da Sala: <span id="lobby-game-code" class="font-mono text-lg text-yellow-300 break-all"></span></p>
+                <button id="copy-code-btn" class="action-button !py-2 !px-4 !text-sm">Copiar Código</button>
+            </div>
+
+            <div class="flex gap-4 w-full max-w-md justify-center mt-4">
+                <button id="start-game-btn" class="action-button bg-green-600 hover:bg-green-700 w-1/2 hidden">Começar Jogo (Min 2)</button>
+                <button id="delete-game-btn" class="action-button bg-red-600 hover:bg-red-700 w-1/2 hidden">Remover Sala</button>
+            </div>
+        </div>
+
+        <!-- Seção de Jogo -->
+        <div id="game-play-section" class="hidden flex flex-col items-center gap-4">
+             <h2 class="text-2xl font-bold text-yellow-300 mb-4">Mesa de Jogo</h2>
+            <p class="text-gray-300">Código do Jogo: <span id="current-game-code" class="font-mono text-sm text-blue-300"></span></p>
+
+            <div class="bg-indigo-700 p-3 rounded-lg shadow-md w-full text-center">
+                <p class="text-lg font-semibold text-white">Vez de: <span id="current-turn-player" class="font-bold text-yellow-300"></span></p>
+            </div>
+
+            <!-- Status da ação atual -->
+            <div id="current-action-status" class="hidden bg-orange-600 p-3 rounded-lg shadow-md w-full text-center">
+                <p id="action-status-text" class="text-white font-semibold"></p>
+                <div id="challenge-timer-container" class="hidden mt-2">
+                    <p class="text-sm text-orange-200">Tempo para contestar: <span id="challenge-timer" class="challenge-timer font-bold">10</span>s</p>
+                </div>
+            </div>
+
+            <div id="player-info" class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Outros jogadores serão renderizados dinamicamente aqui -->
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-xl w-full max-w-md flex flex-col items-center gap-4">
+                <h3 class="text-xl font-semibold text-gray-200">Sua Mão</h3>
+                <div id="your-cards" class="flex flex-wrap gap-3 justify-center">
+                    <!-- Suas cartas serão renderizadas dinamicamente aqui -->
+                </div>
+                <p class="text-xl font-semibold text-gray-200">Suas Notas de 100: <span id="your-coins" class="text-yellow-400 font-bold">0</span></p>
+            </div>
+
+            <div id="action-buttons" class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-2xl mt-6">
+                 <button id="action-income" class="action-button">Trampo do Dia (1)</button>
+                <button id="action-foreign-aid" class="action-button">Bolsa Família (2)</button>
+                <button id="action-coup" class="action-button bg-red-700 hover:bg-red-800">Tomar o Morro (7)</button>
+                <button id="action-character-tax" class="action-button bg-teal-600 hover:bg-teal-700">Cobrança (Agiota - 3)</button>
+                <button id="action-character-steal" class="action-button bg-teal-600 hover:bg-teal-700">Taxa (Miliciano - 2)</button>
+                <button id="action-character-assassinate" class="action-button bg-teal-600 hover:bg-teal-700">Queima de Arquivo (3)</button>
+                <button id="action-character-exchange" class="action-button bg-teal-600 hover:bg-teal-700">Troca de Contatos</button>
+            </div>
+
+            <!-- Botões de interação -->
+            <div id="interaction-buttons" class="hidden grid grid-cols-2 gap-4 w-full max-w-md mt-4">
+                <button id="challenge-btn" class="action-button bg-red-600 hover:bg-red-700">Contestar!</button>
+                <button id="block-btn" class="action-button bg-purple-600 hover:bg-purple-700">Bloquear!</button>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-xl shadow-inner w-full mt-6 max-w-lg">
+                 <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-semibold text-gray-200">Registro do Jogo</h3>
+                </div>
+                <div id="game-log-container" class="h-48 overflow-y-auto">
+                    <div id="game-log" class="space-y-1"></div>
+                </div>
+            </div>
+
+            <button id="leave-game-btn" class="action-button bg-red-600 hover:bg-red-700 w-full md:w-1/3 mt-4">Sair do Jogo</button>
+        </div>
+        
+        <!-- Seção de Fim de Jogo -->
+        <div id="game-over-section" class="hidden flex-col items-center gap-6 text-center">
+            <h2 class="text-4xl font-bold text-yellow-400">O Jogo Acabou!</h2>
+            <p class="text-2xl text-white">O grande vencedor é <span id="winner-name" class="font-bold"></span>!</p>
+            <div class="flex flex-col md:flex-row gap-4 mt-4">
+                <button id="back-to-lobby-btn" class="action-button">Voltar ao Lobby</button>
+            </div>
+        </div>
+
+        <!-- Modal de Mensagem -->
+        <div id="message-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl flex flex-col items-center gap-6 max-w-md w-full">
+                <p id="modal-message" class="text-xl text-white text-center"></p>
+                <button id="modal-close-btn" class="action-button bg-blue-600 hover:bg-blue-700">Fechar</button>
+            </div>
+        </div>
+        
+        <!-- Modal de Seleção de Alvo -->
+        <div id="target-selection-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[51]">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl flex flex-col items-center gap-6 max-w-md w-full">
+                <h3 id="target-modal-title" class="text-2xl text-white font-bold">Escolha um Alvo</h3>
+                <div id="target-list" class="w-full space-y-2"></div>
+                <button id="cancel-target-btn" class="action-button bg-red-600 hover:bg-red-700 w-full">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- Modal de Contestação -->
+        <div id="challenge-modal" class="hidden challenge-overlay">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl flex flex-col items-center gap-6 max-w-md w-full">
+                <h3 class="text-2xl text-white font-bold">Contestar Ação</h3>
+                <p id="challenge-description" class="text-gray-300 text-center"></p>
+                <div class="flex gap-4 w-full">
+                    <button id="confirm-challenge-btn" class="action-button bg-red-600 hover:bg-red-700 flex-1">Contestar</button>
+                    <button id="cancel-challenge-btn" class="action-button bg-gray-600 hover:bg-gray-700 flex-1">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Bloqueio -->
+        <div id="block-modal" class="hidden challenge-overlay">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl flex flex-col items-center gap-6 max-w-md w-full">
+                <h3 class="text-2xl text-white font-bold">Bloquear Ação</h3>
+                <p id="block-description" class="text-gray-300 text-center"></p>
+                <div id="block-character-selection" class="w-full space-y-2">
+                    <!-- Opções de personagem para bloquear serão inseridas aqui -->
+                </div>
+                <button id="cancel-block-btn" class="action-button bg-gray-600 hover:bg-gray-700 w-full">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- Modal de Perda de Influência -->
+        <div id="lose-influence-modal" class="hidden challenge-overlay">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl flex flex-col items-center gap-6 max-w-md w-full">
+                <h3 class="text-2xl text-white font-bold">Perder Influência</h3>
+                <p id="lose-influence-description" class="text-gray-300 text-center">Você precisa escolher uma carta para perder:</p>
+                <div id="lose-influence-cards" class="flex gap-3 justify-center">
+                    <!-- Cartas do jogador serão inseridas aqui -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Troca de Cartas (Despachante) -->
+        <div id="exchange-modal" class="hidden challenge-overlay">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl flex flex-col items-center gap-6 max-w-lg w-full">
+                <h3 class="text-2xl text-white font-bold">Troca de Contatos</h3>
+                <p class="text-gray-300 text-center">Escolha até 2 cartas do baralho para trocar:</p>
+                
+                <div class="w-full">
+                    <h4 class="text-lg text-white mb-2">Suas cartas atuais:</h4>
+                    <div id="exchange-current-cards" class="flex gap-3 justify-center mb-4">
+                        <!-- Cartas atuais do jogador -->
+                    </div>
+                </div>
+                
+                <div class="w-full">
+                    <h4 class="text-lg text-white mb-2">Cartas do baralho:</h4>
+                    <div id="exchange-deck-cards" class="flex gap-3 justify-center mb-4">
+                        <!-- Cartas do baralho -->
+                    </div>
+                </div>
+                
+                <div class="flex gap-4 w-full">
+                    <button id="confirm-exchange-btn" class="action-button bg-green-600 hover:bg-green-700 flex-1">Confirmar Troca</button>
+                    <button id="cancel-exchange-btn" class="action-button bg-gray-600 hover:bg-gray-700 flex-1">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, arrayUnion, arrayRemove, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+        setLogLevel('Debug');
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app, db, auth, userId = null, currentGameId = null, unsubscribeGameListener = null, currentGameState = null;
+        let challengeTimer = null;
+        let pendingAction = null;
+
+        const DECK = ['Agiota', 'Pistoleiro', 'Do Job', 'Miliciano', 'Despachante'];
+        
+        // Mapas de imagens dos personagens
+        const CHARACTER_IMAGES = {
+            'Agiota': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/j95lqqcr_Agiota.png',
+            'Pistoleiro': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/213oq7dm_Pistoleiro.png',
+            'Do Job': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/rt1p64c3_Do%20Job.png',
+            'Miliciano': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/0dkmxmvw_Milicia.png',
+            'Despachante': 'https://customer-assets.emergentagent.com/job_personagens-visual/artifacts/c6941umo_Despachante.png'
+        };
+
+        // Elementos DOM
+        const lobbySection = document.getElementById('lobby-section');
+        const gamePlaySection = document.getElementById('game-play-section');
+        const gameOverSection = document.getElementById('game-over-section');
+        const playerNameInput = document.getElementById('player-name-input');
+        const createGameBtn = document.getElementById('create-game-btn');
+        const gameCodeInput = document.getElementById('game-code-input');
+        const joinGameBtn = document.getElementById('join-game-btn');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const deleteGameBtn = document.getElementById('delete-game-btn');
+        const gameCodeDisplay = document.getElementById('game-code-display');
+        const lobbyGameCodeSpan = document.getElementById('lobby-game-code');
+        const copyCodeBtn = document.getElementById('copy-code-btn');
+        const currentTurnPlayerSpan = document.getElementById('current-turn-player');
+        const yourCardsDiv = document.getElementById('your-cards');
+        const yourCoinsSpan = document.getElementById('your-coins');
+        const gameLogDiv = document.getElementById('game-log');
+        const currentGameCodeSpan = document.getElementById('current-game-code');
+        const playerInfoDiv = document.getElementById('player-info');
+        const leaveGameBtn = document.getElementById('leave-game-btn');
+        const messageModal = document.getElementById('message-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const targetSelectionModal = document.getElementById('target-selection-modal');
+        const targetModalTitle = document.getElementById('target-modal-title');
+        const targetListDiv = document.getElementById('target-list');
+        const cancelTargetBtn = document.getElementById('cancel-target-btn');
+        const winnerNameSpan = document.getElementById('winner-name');
+        const backToLobbyBtn = document.getElementById('back-to-lobby-btn');
+        
+        // Novos elementos
+        const currentActionStatus = document.getElementById('current-action-status');
+        const actionStatusText = document.getElementById('action-status-text');
+        const challengeTimerContainer = document.getElementById('challenge-timer-container');
+        const challengeTimerSpan = document.getElementById('challenge-timer');
+        const interactionButtons = document.getElementById('interaction-buttons');
+        const challengeBtn = document.getElementById('challenge-btn');
+        const blockBtn = document.getElementById('block-btn');
+
+        // --- Funções Utilitárias ---
+        function showMessageModal(message) { 
+            modalMessage.innerHTML = message.replace(/\n/g, '<br>'); 
+            messageModal.classList.remove('hidden'); 
+        }
+
+        function addToGameLog(message) {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'text-sm text-gray-400 p-2 border-b border-gray-600';
+            logEntry.textContent = message;
+            gameLogDiv.insertBefore(logEntry, gameLogDiv.firstChild);
+        }
+
+        function renderCard(cardName, isClickable = false, onClick = null) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = `card ${isClickable ? 'cursor-pointer hover:bg-gray-600' : ''}`;
+            
+            if (CHARACTER_IMAGES[cardName]) {
+                cardDiv.innerHTML = `
+                    <img src="${CHARACTER_IMAGES[cardName]}" alt="${cardName}" class="card-image">
+                    <span class="text-sm">${cardName}</span>
+                `;
+            } else {
+                cardDiv.textContent = cardName;
+            }
+            
+            if (isClickable && onClick) {
+                cardDiv.addEventListener('click', onClick);
+            }
+            
+            return cardDiv;
+        }
+
+        function showLobby() { 
+            lobbySection.classList.remove('hidden'); 
+            gamePlaySection.classList.add('hidden'); 
+            gameOverSection.classList.add('hidden');
+            gameCodeDisplay.classList.add('hidden');
+            document.getElementById('lobby-players-container').classList.add('hidden');
+            if (unsubscribeGameListener) unsubscribeGameListener();
+            currentGameId = null;
+            clearPendingAction();
+        }
+
+        function clearPendingAction() {
+            pendingAction = null;
+            currentActionStatus.classList.add('hidden');
+            interactionButtons.classList.add('hidden');
+            challengeTimerContainer.classList.add('hidden');
+            if (challengeTimer) {
+                clearInterval(challengeTimer);
+                challengeTimer = null;
+            }
+        }
+
+        function startChallengeTimer(duration = 10) {
+            let timeLeft = duration;
+            challengeTimerSpan.textContent = timeLeft;
+            challengeTimerContainer.classList.remove('hidden');
+            
+            challengeTimer = setInterval(() => {
+                timeLeft--;
+                challengeTimerSpan.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(challengeTimer);
+                    challengeTimer = null;
+                    // Auto-resolver a ação se ninguém contestou/bloqueou
+                    if (pendingAction) {
+                        resolveAction(pendingAction);
+                    }
+                }
+            }, 1000);
+        }
+
+        // --- Lógica do Lobby ---
+        function updateLobbyUI(gameData) {
+            const playersContainer = document.getElementById('lobby-players-container');
+            const playerCountSpan = document.getElementById('player-count');
+            const playersListDiv = document.getElementById('lobby-players-list');
+
+            playersContainer.classList.remove('hidden');
+            playerCountSpan.textContent = gameData.players.length;
+            playersListDiv.innerHTML = gameData.players.map(p => {
+                const isHost = p.userId === gameData.hostId ? '👑' : '';
+                const isMe = p.userId === userId ? '(Você)' : '';
+                return `<div class="text-gray-300 p-1">${p.displayName} ${isMe} ${isHost}</div>`;
+            }).join('');
+        }
+        
+        async function createGame() {
+            const playerName = playerNameInput.value.trim();
+            if (!playerName) { showMessageModal("Precisa de um nome para jogar!"); return; }
+            
+            createGameBtn.disabled = true;
+            createGameBtn.textContent = 'Criando...';
+            try {
+                const gameRef = await addDoc(collection(db, `artifacts/${appId}/public/data/games`), {
+                    hostId: userId,
+                    players: [{ userId, displayName: playerName, coins: 2, cards: [], eliminated: false }],
+                    state: 'lobby',
+                    createdAt: new Date(),
+                    log: [`${playerName} criou a sala.`]
+                });
+                currentGameId = gameRef.id;
+                listenToGameChanges(currentGameId);
+            } catch(e) {
+                showMessageModal("Erro ao criar a sala.");
+            } finally {
+                createGameBtn.disabled = false;
+                createGameBtn.textContent = 'Criar Novo Jogo';
+            }
+        }
+        
+        async function joinGame() {
+            const playerName = playerNameInput.value.trim();
+            const gameId = gameCodeInput.value.trim();
+            if (!playerName || !gameId) { showMessageModal("Precisa do nome e do código da sala!"); return; }
+
+            joinGameBtn.disabled = true;
+            joinGameBtn.textContent = 'Entrando...';
+            const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
+            try {
+                const gameDoc = await getDoc(gameRef);
+                if (!gameDoc.exists()) throw new Error("Sala não encontrada.");
+
+                const gameData = gameDoc.data();
+                if (gameData.state !== 'lobby') throw new Error("O jogo já começou.");
+                if (gameData.players.length >= 6) throw new Error("A sala está cheia.");
+                if (gameData.players.some(p => p.userId === userId)) {
+                     console.log("Jogador já está na sala, reconectando...");
+                     currentGameId = gameId;
+                     listenToGameChanges(currentGameId);
+                     return;
+                };
+
+                const newPlayer = { userId, displayName: playerName, coins: 2, cards: [], eliminated: false };
+                await updateDoc(gameRef, {
+                    players: arrayUnion(newPlayer),
+                    log: arrayUnion(`${playerName} entrou na sala.`)
+                });
+
+                currentGameId = gameId;
+                listenToGameChanges(currentGameId);
+            } catch (error) { 
+                showMessageModal(`Erro ao entrar: ${error.message}`); 
+            } finally {
+                joinGameBtn.disabled = false;
+                joinGameBtn.textContent = 'Entrar no Jogo';
+            }
+        }
+
+        function listenToGameChanges(gameId) {
+             if (unsubscribeGameListener) unsubscribeGameListener();
+            const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
+            unsubscribeGameListener = onSnapshot(gameRef, (docSnapshot) => {
+                if (!docSnapshot.exists()) { 
+                    if(currentGameId === gameId) {
+                        showMessageModal('A sala foi removida pelo anfitrião.'); 
+                        showLobby(); 
+                    }
+                    return; 
+                }
+                currentGameState = docSnapshot.data();
+                
+                if (!currentGameState.players.some(p => p.userId === userId)) {
+                    showMessageModal("Você não está mais nesta sala.");
+                    showLobby();
+                    return;
+                }
+                
+                if (currentGameState.state === 'lobby') {
+                    lobbySection.classList.remove('hidden');
+                    gamePlaySection.classList.add('hidden');
+                    gameOverSection.classList.add('hidden');
+                    
+                    updateLobbyUI(currentGameState);
+
+                    lobbyGameCodeSpan.textContent = gameId;
+                    gameCodeDisplay.classList.remove('hidden');
+                    const isHost = currentGameState.hostId === userId;
+                    deleteGameBtn.classList.toggle('hidden', !isHost);
+                    startGameBtn.classList.toggle('hidden', !isHost || currentGameState.players.length < 2);
+                } else if (currentGameState.state === 'playing') {
+                    lobbySection.classList.add('hidden');
+                    gamePlaySection.classList.remove('hidden');
+                    gameOverSection.classList.add('hidden');
+                    updateGameUI(currentGameState);
+                } else if (currentGameState.state === 'finished') {
+                    lobbySection.classList.add('hidden');
+                    gamePlaySection.classList.add('hidden');
+                    gameOverSection.classList.remove('hidden');
+                    winnerNameSpan.textContent = currentGameState.winnerName;
+                }
+            });
+        }
+
+        // --- Lógica do Jogo ---
+        function updateGameUI(gameData) {
+            currentGameCodeSpan.textContent = currentGameId;
+            currentTurnPlayerSpan.textContent = gameData.players.find(p => p.userId === gameData.turn)?.displayName || '...';
+            
+            const me = gameData.players.find(p => p.userId === userId);
+            if (!me) {
+                showLobby();
+                showMessageModal("Você foi removido da partida.");
+                return;
+            }
+
+            yourCoinsSpan.textContent = me.coins;
+            
+            // Renderizar suas cartas com imagens
+            yourCardsDiv.innerHTML = '';
+            me.cards.forEach(cardName => {
+                const cardElement = renderCard(cardName);
+                yourCardsDiv.appendChild(cardElement);
+            });
+
+            // Renderizar outros jogadores
+            playerInfoDiv.innerHTML = gameData.players.filter(p => p.userId !== userId)
+                .map(p => {
+                    const statusClass = p.eliminated ? 'opacity-50' : '';
+                    const eliminatedText = p.eliminated ? ' (Eliminado)' : '';
+                    return `
+                        <div class="bg-gray-700 p-4 rounded-lg shadow-md ${statusClass}">
+                            <h4 class="font-bold text-lg">${p.displayName} ${p.userId === gameData.hostId ? '👑' : ''}${eliminatedText}</h4>
+                            <p>Notas de 100: <span class="font-bold text-yellow-400">${p.coins}</span></p>
+                            <p>Influência: ${p.cards.length}</p>
+                        </div>
+                    `;
+                }).join('');
+
+            // Atualizar log do jogo
+            gameLogDiv.innerHTML = gameData.log.slice().reverse().map(item => 
+                `<div class="text-sm text-gray-400 p-2 border-b border-gray-600">${item}</div>`
+            ).join('');
+            
+            // Atualizar estado dos botões
+            const isMyTurn = gameData.turn === userId && !me.eliminated;
+            const hasPendingAction = gameData.pendingAction != null;
+            
+            document.querySelectorAll('#action-buttons button').forEach(btn => {
+                btn.disabled = !isMyTurn || hasPendingAction;
+            });
+            
+            // Regras específicas de botões
+            document.getElementById('action-coup').disabled = !isMyTurn || me.coins < 7 || hasPendingAction;
+            document.getElementById('action-character-assassinate').disabled = !isMyTurn || me.coins < 3 || hasPendingAction;
+            document.getElementById('action-foreign-aid').disabled = !isMyTurn || hasPendingAction;
+            
+            // Verificar se precisa fazer golpe obrigatório
+            if (isMyTurn && me.coins >= 10) {
+                showMessageModal("Você tem 10+ notas e deve fazer um Golpe obrigatório!");
+                document.querySelectorAll('#action-buttons button').forEach(btn => btn.disabled = true);
+                document.getElementById('action-coup').disabled = false;
+            }
+
+            // Gerenciar ação pendente
+            if (gameData.pendingAction) {
+                handlePendingAction(gameData.pendingAction, gameData);
+            } else {
+                clearPendingAction();
+            }
+
+            // Verificar condição de vitória
+            const activePlayers = gameData.players.filter(p => !p.eliminated);
+            if (activePlayers.length === 1) {
+                // Fim de jogo
+                setTimeout(async () => {
+                    await updateDoc(doc(db, `artifacts/${appId}/public/data/games`, currentGameId), {
+                        state: 'finished',
+                        winnerName: activePlayers[0].displayName
+                    });
+                }, 2000);
+            }
+        }
+
+        function handlePendingAction(action, gameData) {
+            const actionPlayer = gameData.players.find(p => p.userId === action.playerId);
+            const isMyAction = action.playerId === userId;
+            
+            // Mostrar status da ação
+            actionStatusText.textContent = `${actionPlayer.displayName} quer ${getActionDescription(action)}`;
+            currentActionStatus.classList.remove('hidden');
+            
+            // Se não é minha ação e posso interagir, mostrar botões
+            if (!isMyAction) {
+                const canChallenge = canChallengeAction(action);
+                const canBlock = canBlockAction(action, gameData.players.find(p => p.userId === userId));
+                
+                if (canChallenge || canBlock) {
+                    interactionButtons.classList.remove('hidden');
+                    challengeBtn.disabled = !canChallenge;
+                    blockBtn.disabled = !canBlock;
+                    
+                    if (!action.challengeTimer) {
+                        startChallengeTimer(10);
+                    }
+                }
+            }
+        }
+
+        function getActionDescription(action) {
+            switch (action.type) {
+                case 'income': return 'fazer Trampo do Dia';
+                case 'foreign-aid': return 'pegar Bolsa Família';
+                case 'coup': return `Tomar o Morro de ${gameData.players.find(p => p.userId === action.targetId)?.displayName}`;
+                case 'tax': return 'fazer Cobrança (Agiota)';
+                case 'steal': return `cobrar Taxa de ${gameData.players.find(p => p.userId === action.targetId)?.displayName} (Miliciano)`;
+                case 'assassinate': return `fazer Queima de Arquivo em ${gameData.players.find(p => p.userId === action.targetId)?.displayName} (Pistoleiro)`;
+                case 'exchange': return 'fazer Troca de Contatos (Despachante)';
+                default: return 'fazer uma ação';
+            }
+        }
+
+        function canChallengeAction(action) {
+            // Só pode contestar ações de personagem
+            return ['tax', 'steal', 'assassinate', 'exchange'].includes(action.type);
+        }
+
+        function canBlockAction(action, player) {
+            if (action.type === 'foreign-aid') return true; // Qualquer um com Agiota pode bloquear
+            if (action.type === 'steal' && action.targetId === userId) return true; // Alvo pode bloquear com Miliciano/Despachante
+            if (action.type === 'assassinate' && action.targetId === userId) return true; // Alvo pode bloquear com Do Job
+            return false;
+        }
+
+        // --- Ações do Jogo ---
+        async function performAction(actionType, targetId = null) {
+            if (!currentGameState || currentGameState.turn !== userId) {
+                showMessageModal("Não é sua vez!");
+                return;
+            }
+            
+            const me = currentGameState.players.find(p => p.userId === userId);
+            if (me.eliminated) {
+                showMessageModal("Você foi eliminado!");
+                return;
+            }
+            
+            // Criar ação pendente
+            const action = {
+                type: actionType,
+                playerId: userId,
+                targetId: targetId,
+                timestamp: Date.now()
+            };
+            
+            try {
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/games`, currentGameId), {
+                    pendingAction: action,
+                    log: arrayUnion(`${me.displayName} quer ${getActionDescription(action)}`)
+                });
+            } catch (error) {
+                showMessageModal(`Erro: ${error.message}`);
+            }
+        }
+
+        async function resolveAction(action) {
+            try {
+                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
+                await runTransaction(db, async (transaction) => {
+                    const gameDoc = await transaction.get(gameRef);
+                    if (!gameDoc.exists()) throw new Error("O jogo não existe mais.");
+                    
+                    const gameData = gameDoc.data();
+                    const players = [...gameData.players];
+                    const actor = players.find(p => p.userId === action.playerId);
+                    const target = action.targetId ? players.find(p => p.userId === action.targetId) : null;
+                    
+                    let logMessage = '';
+                    let nextTurn = gameData.turn;
+                    
+                    // Executar a ação
+                    switch (action.type) {
+                        case 'income':
+                            actor.coins += 1;
+                            logMessage = `${actor.displayName} fez Trampo do Dia (+1 nota).`;
+                            break;
+                            
+                        case 'foreign-aid':
+                            actor.coins += 2;
+                            logMessage = `${actor.displayName} pegou Bolsa Família (+2 notas).`;
+                            break;
+                            
+                        case 'coup':
+                            if (actor.coins < 7) throw new Error("Não tem notas suficientes para o golpe.");
+                            actor.coins -= 7;
+                            // Target perde influência (será tratado em modal separado)
+                            logMessage = `${actor.displayName} fez Golpe em ${target.displayName}.`;
+                            break;
+                            
+                        case 'tax':
+                            actor.coins += 3;
+                            logMessage = `${actor.displayName} fez Cobrança (Agiota) (+3 notas).`;
+                            break;
+                            
+                        case 'steal':
+                            const stolenAmount = Math.min(2, target.coins);
+                            target.coins -= stolenAmount;
+                            actor.coins += stolenAmount;
+                            logMessage = `${actor.displayName} cobrou Taxa de ${target.displayName} (Miliciano) (+${stolenAmount} notas).`;
+                            break;
+                            
+                        case 'assassinate':
+                            if (actor.coins < 3) throw new Error("Não tem notas suficientes para assassinato.");
+                            actor.coins -= 3;
+                            // Target perde influência (será tratado em modal separado)
+                            logMessage = `${actor.displayName} fez Queima de Arquivo em ${target.displayName} (Pistoleiro).`;
+                            break;
+                            
+                        case 'exchange':
+                            // Troca será tratada em modal separado
+                            logMessage = `${actor.displayName} fez Troca de Contatos (Despachante).`;
+                            break;
+                    }
+                    
+                    // Avançar turno
+                    const activePlayers = players.filter(p => !p.eliminated);
+                    const currentTurnIndex = activePlayers.findIndex(p => p.userId === gameData.turn);
+                    const nextPlayer = activePlayers[(currentTurnIndex + 1) % activePlayers.length];
+                    nextTurn = nextPlayer.userId;
+                    
+                    // Atualizar jogo
+                    transaction.update(gameRef, {
+                        players: players,
+                        turn: nextTurn,
+                        pendingAction: null,
+                        log: arrayUnion(logMessage)
+                    });
+                    
+                    // Lidar com perda de influência se necessário
+                    if (['coup', 'assassinate'].includes(action.type)) {
+                        setTimeout(() => {
+                            showLoseInfluenceModal(action.targetId, action.type === 'coup' ? 'golpe' : 'assassinato');
+                        }, 1000);
+                    }
+                    
+                    // Lidar com troca de cartas se necessário
+                    if (action.type === 'exchange') {
+                        setTimeout(() => {
+                            showExchangeModal();
+                        }, 1000);
+                    }
+                });
+                
+            } catch (error) {
+                showMessageModal(`Erro na ação: ${error.message}`);
+            }
+        }
+
+        // --- Sistema de Contestação ---
+        challengeBtn.addEventListener('click', () => {
+            if (!currentGameState.pendingAction) return;
+            
+            const action = currentGameState.pendingAction;
+            const actionPlayer = currentGameState.players.find(p => p.userId === action.playerId);
+            
+            document.getElementById('challenge-description').textContent = 
+                `Você quer contestar a ação "${getActionDescription(action)}" de ${actionPlayer.displayName}?`;
+            document.getElementById('challenge-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('confirm-challenge-btn').addEventListener('click', async () => {
+            document.getElementById('challenge-modal').classList.add('hidden');
+            await handleChallenge(currentGameState.pendingAction);
+        });
+
+        document.getElementById('cancel-challenge-btn').addEventListener('click', () => {
+            document.getElementById('challenge-modal').classList.add('hidden');
+        });
+
+        async function handleChallenge(action) {
+            try {
+                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
+                await runTransaction(db, async (transaction) => {
+                    const gameDoc = await transaction.get(gameRef);
+                    const gameData = gameDoc.data();
+                    const players = [...gameData.players];
+                    
+                    const challenger = players.find(p => p.userId === userId);
+                    const actionPlayer = players.find(p => p.userId === action.playerId);
+                    
+                    // Verificar se o jogador tem a carta necessária
+                    const requiredCard = getRequiredCard(action.type);
+                    const hasCard = actionPlayer.cards.includes(requiredCard);
+                    
+                    let logMessage = '';
+                    
+                    if (hasCard) {
+                        // Contestação falhada - challenger perde influência
+                        logMessage = `${challenger.displayName} contestou ${actionPlayer.displayName} e perdeu! ${actionPlayer.displayName} tinha ${requiredCard}.`;
+                        
+                        // Embaralhar carta do action player
+                        const cardIndex = actionPlayer.cards.indexOf(requiredCard);
+                        actionPlayer.cards.splice(cardIndex, 1);
+                        
+                        // Pegar nova carta do baralho
+                        let deck = gameData.deck || [...DECK, ...DECK, ...DECK];
+                        deck = deck.filter(card => !players.some(p => p.cards.includes(card)));
+                        if (deck.length > 0) {
+                            const newCard = deck[Math.floor(Math.random() * deck.length)];
+                            actionPlayer.cards.push(newCard);
+                        }
+                        
+                        transaction.update(gameRef, {
+                            players: players,
+                            pendingAction: null,
+                            log: arrayUnion(logMessage),
+                            deck: deck
+                        });
+                        
+                        // Challenger perde influência
+                        setTimeout(() => {
+                            showLoseInfluenceModal(userId, 'contestação falhada');
+                        }, 1000);
+                        
+                        // Resolver a ação original
+                        setTimeout(() => {
+                            resolveAction(action);
+                        }, 2000);
+                        
+                    } else {
+                        // Contestação bem-sucedida - action player perde influência
+                        logMessage = `${challenger.displayName} contestou ${actionPlayer.displayName} com sucesso! ${actionPlayer.displayName} não tinha ${requiredCard}.`;
+                        
+                        // Avançar turno
+                        const activePlayers = players.filter(p => !p.eliminated);
+                        const currentTurnIndex = activePlayers.findIndex(p => p.userId === gameData.turn);
+                        const nextPlayer = activePlayers[(currentTurnIndex + 1) % activePlayers.length];
+                        
+                        transaction.update(gameRef, {
+                            players: players,
+                            turn: nextPlayer.userId,
+                            pendingAction: null,
+                            log: arrayUnion(logMessage)
+                        });
+                        
+                        // Action player perde influência
+                        setTimeout(() => {
+                            showLoseInfluenceModal(action.playerId, 'contestação perdida');
+                        }, 1000);
+                    }
+                });
+            } catch (error) {
+                showMessageModal(`Erro na contestação: ${error.message}`);
+            }
+        }
+
+        function getRequiredCard(actionType) {
+            switch (actionType) {
+                case 'tax': return 'Agiota';
+                case 'steal': return 'Miliciano';
+                case 'assassinate': return 'Pistoleiro';
+                case 'exchange': return 'Despachante';
+                default: return null;
+            }
+        }
+
+        // --- Sistema de Bloqueio ---
+        blockBtn.addEventListener('click', () => {
+            if (!currentGameState.pendingAction) return;
+            showBlockModal(currentGameState.pendingAction);
+        });
+
+        function showBlockModal(action) {
+            const blockCharacterSelection = document.getElementById('block-character-selection');
+            blockCharacterSelection.innerHTML = '';
+            
+            let blockOptions = [];
+            
+            if (action.type === 'foreign-aid') {
+                blockOptions = ['Agiota'];
+            } else if (action.type === 'steal' && action.targetId === userId) {
+                blockOptions = ['Miliciano', 'Despachante'];
+            } else if (action.type === 'assassinate' && action.targetId === userId) {
+                blockOptions = ['Do Job'];
+            }
+            
+            blockOptions.forEach(character => {
+                const button = document.createElement('button');
+                button.className = 'action-button bg-purple-600 hover:bg-purple-700 w-full';
+                button.textContent = `Bloquear com ${character}`;
+                button.addEventListener('click', () => {
+                    document.getElementById('block-modal').classList.add('hidden');
+                    handleBlock(action, character);
+                });
+                blockCharacterSelection.appendChild(button);
+            });
+            
+            document.getElementById('block-description').textContent = 
+                `Escolha o personagem para bloquear a ação:`;
+            document.getElementById('block-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('cancel-block-btn').addEventListener('click', () => {
+            document.getElementById('block-modal').classList.add('hidden');
+        });
+
+        async function handleBlock(action, blockingCharacter) {
+            try {
+                const me = currentGameState.players.find(p => p.userId === userId);
+                const actionPlayer = currentGameState.players.find(p => p.userId === action.playerId);
+                
+                const blockAction = {
+                    type: 'block',
+                    playerId: userId,
+                    originalAction: action,
+                    blockingCharacter: blockingCharacter,
+                    timestamp: Date.now()
+                };
+                
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/games`, currentGameId), {
+                    pendingAction: blockAction,
+                    log: arrayUnion(`${me.displayName} tentou bloquear com ${blockingCharacter}!`)
+                });
+                
+            } catch (error) {
+                showMessageModal(`Erro no bloqueio: ${error.message}`);
+            }
+        }
+
+        // --- Modal de Perda de Influência ---
+        function showLoseInfluenceModal(targetPlayerId, reason) {
+            if (targetPlayerId !== userId) return; // Só mostra para o próprio jogador
+            
+            const me = currentGameState.players.find(p => p.userId === userId);
+            if (me.cards.length === 0) return;
+            
+            document.getElementById('lose-influence-description').textContent = 
+                `Você precisa perder uma influência por ${reason}:`;
+            
+            const loseInfluenceCards = document.getElementById('lose-influence-cards');
+            loseInfluenceCards.innerHTML = '';
+            
+            me.cards.forEach((cardName, index) => {
+                const cardElement = renderCard(cardName, true, async () => {
+                    await loseInfluence(index);
+                    document.getElementById('lose-influence-modal').classList.add('hidden');
+                });
+                loseInfluenceCards.appendChild(cardElement);
+            });
+            
+            document.getElementById('lose-influence-modal').classList.remove('hidden');
+        }
+
+        async function loseInfluence(cardIndex) {
+            try {
+                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
+                await runTransaction(db, async (transaction) => {
+                    const gameDoc = await transaction.get(gameRef);
+                    const gameData = gameDoc.data();
+                    const players = [...gameData.players];
+                    
+                    const player = players.find(p => p.userId === userId);
+                    const lostCard = player.cards[cardIndex];
+                    player.cards.splice(cardIndex, 1);
+                    
+                    // Se perdeu todas as cartas, é eliminado
+                    if (player.cards.length === 0) {
+                        player.eliminated = true;
+                    }
+                    
+                    transaction.update(gameRef, {
+                        players: players,
+                        log: arrayUnion(`${player.displayName} perdeu ${lostCard}${player.eliminated ? ' e foi eliminado!' : ''}`)
+                    });
+                });
+            } catch (error) {
+                showMessageModal(`Erro: ${error.message}`);
+            }
+        }
+
+        // --- Modal de Troca (Despachante) ---
+        function showExchangeModal() {
+            // Implementar modal de troca de cartas
+            document.getElementById('exchange-modal').classList.remove('hidden');
+            // TODO: Implementar lógica completa
+        }
+
+        // --- Seleção de Alvos ---
+        function showTargetSelectionModal(actionType, callback) {
+            const eligibleTargets = currentGameState.players.filter(p => 
+                p.userId !== userId && !p.eliminated && p.cards.length > 0
+            );
+            
+            if (eligibleTargets.length === 0) {
+                showMessageModal("Não há alvos válidos!");
+                return;
+            }
+            
+            targetModalTitle.textContent = "Escolha um Alvo";
+            targetListDiv.innerHTML = '';
+            
+            eligibleTargets.forEach(player => {
+                const button = document.createElement('button');
+                button.className = 'action-button w-full';
+                button.textContent = player.displayName;
+                button.addEventListener('click', () => {
+                    targetSelectionModal.classList.add('hidden');
+                    callback(player.userId);
+                });
+                targetListDiv.appendChild(button);
+            });
+            
+            targetSelectionModal.classList.remove('hidden');
+        }
+
+        // --- Event Listeners das Ações ---
+        document.getElementById('action-income').addEventListener('click', () => performAction('income'));
+        document.getElementById('action-foreign-aid').addEventListener('click', () => performAction('foreign-aid'));
+        
+        document.getElementById('action-coup').addEventListener('click', () => {
+            showTargetSelectionModal('coup', (targetId) => performAction('coup', targetId));
+        });
+        
+        document.getElementById('action-character-tax').addEventListener('click', () => performAction('tax'));
+        
+        document.getElementById('action-character-steal').addEventListener('click', () => {
+            showTargetSelectionModal('steal', (targetId) => performAction('steal', targetId));
+        });
+        
+        document.getElementById('action-character-assassinate').addEventListener('click', () => {
+            showTargetSelectionModal('assassinate', (targetId) => performAction('assassinate', targetId));
+        });
+        
+        document.getElementById('action-character-exchange').addEventListener('click', () => performAction('exchange'));
+
+        // --- Lógica do Jogo Principal ---
+        async function startGame() {
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
+                    const gameDoc = await transaction.get(gameRef);
+                    if (!gameDoc.exists() || gameDoc.data().hostId !== userId) throw new Error("Apenas o anfitrião pode iniciar.");
+                    if (gameDoc.data().players.length < 2) throw new Error("Precisa de no mínimo 2 jogadores.");
+                    
+                    let players = gameDoc.data().players;
+                    let fullDeck = [...DECK, ...DECK, ...DECK];
+                    
+                    // Embaralhar deck
+                    for (let i = fullDeck.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [fullDeck[i], fullDeck[j]] = [fullDeck[j], fullDeck[i]];
+                    }
+                    
+                    // Distribuir cartas
+                    players.forEach(player => { 
+                        player.cards = [fullDeck.pop(), fullDeck.pop()];
+                        player.eliminated = false;
+                    });
+
+                    transaction.update(gameRef, {
+                        state: 'playing', 
+                        players, 
+                        deck: fullDeck, 
+                        turn: players[0].userId,
+                        pendingAction: null,
+                        log: arrayUnion("O jogo começou!")
+                    });
+                });
+            } catch(e) { 
+                showMessageModal(e.message); 
+            }
+        }
+        
+        async function deleteGame() {
+            const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const gameDoc = await transaction.get(gameRef);
+                    if (!gameDoc.exists()) throw new Error("A sala já não existe.");
+                    if (gameDoc.data().hostId !== userId) {
+                        throw new Error("Apenas o anfitrião pode remover a sala.");
+                    }
+                    transaction.delete(gameRef);
+                });
+            } catch(e) {
+                showMessageModal(e.message);
+            }
+        }
+
+        async function leaveGame() {
+            if (!currentGameId) return;
+            const gameRef = doc(db, `artifacts/${appId}/public/data/games`, currentGameId);
+            try {
+                 await runTransaction(db, async (transaction) => {
+                    const gameDoc = await transaction.get(gameRef);
+                    if (!gameDoc.exists()) return;
+                    
+                    const gameData = gameDoc.data();
+                    const playerLeaving = gameData.players.find(p => p.userId === userId);
+                    if (!playerLeaving) return;
+
+                    const remainingPlayers = gameData.players.filter(p => p.userId !== userId);
+
+                    if(remainingPlayers.length === 0) {
+                        transaction.delete(gameRef);
+                    } else {
+                        let newHostId = gameData.hostId;
+                        if(gameData.hostId === userId) {
+                            newHostId = remainingPlayers[0].userId;
+                        }
+                        transaction.update(gameRef, {
+                            players: remainingPlayers,
+                            hostId: newHostId,
+                            log: arrayUnion(`${playerLeaving.displayName} saiu da sala.`)
+                        });
+                    }
+                 });
+            } catch(e) { 
+                console.error("Erro ao sair da sala:", e); 
+            }
+            showLobby();
+        }
+
+        // --- Inicialização ---
+        window.onload = async () => {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) { 
+                        userId = user.uid; 
+                    } else {
+                        if (initialAuthToken) { 
+                            await signInWithCustomToken(auth, initialAuthToken); 
+                        } else { 
+                            await signInAnonymously(auth); 
+                        }
+                    }
+                });
+            } catch(e) { 
+                console.error("Erro na inicialização:", e); 
+                showMessageModal("Erro ao conectar. Tente recarregar a página."); 
+            }
+        };
+        
+        // Event Listeners
+        createGameBtn.addEventListener('click', createGame);
+        joinGameBtn.addEventListener('click', joinGame);
+        startGameBtn.addEventListener('click', startGame);
+        deleteGameBtn.addEventListener('click', deleteGame);
+        leaveGameBtn.addEventListener('click', leaveGame);
+        backToLobbyBtn.addEventListener('click', showLobby);
+        modalCloseBtn.addEventListener('click', () => messageModal.classList.add('hidden'));
+        
+        copyCodeBtn.addEventListener('click', () => {
+            const codeToCopy = lobbyGameCodeSpan.textContent;
+            const textArea = document.createElement("textarea");
+            textArea.value = codeToCopy;
+            textArea.style.position = 'fixed'; 
+            textArea.style.top = 0; 
+            textArea.style.left = 0;
+            textArea.style.opacity = 0;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if(successful){
+                    copyCodeBtn.textContent = 'Copiado!';
+                    setTimeout(() => { copyCodeBtn.textContent = 'Copiar Código'; }, 2000);
+                } else { 
+                    showMessageModal('Não foi possível copiar o código.'); 
+                }
+            } catch (err) { 
+                showMessageModal('Ocorreu um erro ao copiar o código.'); 
+            }
+            document.body.removeChild(textArea);
+        });
+
+        // Cancelar seleção de alvo
+        cancelTargetBtn.addEventListener('click', () => {
+            targetSelectionModal.classList.add('hidden');
+        });
+        
+    </script>
+</body>
+</html>
